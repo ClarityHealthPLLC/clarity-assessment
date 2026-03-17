@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
 
     // 2 — Add to Blastable list
     try {
-      await fetch(
+      const blastableRes = await fetch(
         `${process.env.BLASTABLE_API_URL}/lists/${process.env.BLASTABLE_LIST_ID}/subscribers`,
         {
           method: 'POST',
@@ -48,12 +48,11 @@ export async function POST(req: NextRequest) {
             'Content-Type': 'application/json',
             'X-API-KEY': process.env.BLASTABLE_API_KEY!,
           },
-          body: JSON.stringify({
-            EMAIL: email,
-            status: 'subscribed',
-          }),
+          body: JSON.stringify({ email: email, status: 'subscribed' }),
         }
       )
+      const blastableData = await blastableRes.json()
+      console.log('Blastable response:', JSON.stringify(blastableData))
     } catch (blastableErr) {
       console.warn('Blastable subscription warning:', blastableErr)
     }
