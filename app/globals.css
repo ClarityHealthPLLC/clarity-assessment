@@ -1,0 +1,46 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+* {
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+}
+html, body {
+  max-width: 100vw;
+  overflow-x: hidden;
+  font-family: 'Inter', system-ui, sans-serif;
+  background-color: #f7f9f9;
+  color: #1a2332;
+}
+html {
+  scroll-behavior: smooth;
+}
+.brand-highlight {
+  color: #2cb5b5;
+  font-weight: 700;
+}
+.answer-option {
+  transition: all 0.15s ease;
+  cursor: pointer;
+}
+.answer-option:hover {
+  border-color: #1a8a8a;
+  background-color: #e6f5f5;
+  transform: translateX(3px);
+}
+.answer-option.selected {
+  border-color: #1a8a8a;
+  background-color: #e6f5f5;
+  color: #0d1b2a;
+}
+.answer-option.selected .option-dot {
+  background-color: #1a8a8a;
+  border-color: #1a8a8a;
+}
+.gauge-bar {
+  height: 10px;
+  border-radius: 999px;
+  transition: width 1s ease-out;
+}
