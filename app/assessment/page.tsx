@@ -1,101 +1,147 @@
 'use client'
-import { useState, useCallback, useEffect, Suspense } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
+import { AnimatePresence } from 'framer-motion'
 import Navbar from '@/components/Navbar'
+import Footer from '@/components/Footer'
 import ProgressBar from '@/components/ProgressBar'
 import QuestionCard from '@/components/QuestionCard'
-import { SECTIONS, ALL_QUESTIONS } from '@/lib/questions'
+import { SECTIONS } from '@/lib/questions'
+import { scoreAll } from '@/lib/scoring'
 import type { Answers } from '@/lib/scoring'
 
-// Inner component isolates useSearchParams so the page can be Suspense-wrapped
-function AssessmentInner() {
+function AssessmentContent() {
   const router = useRouter()
-  const searchParams = useSearchParams()
+  const params = useSearchParams()
+  const emailParam = params.get('email') || ''
+  const dataParam = params.get('data') || ''
+
+  const [sectionIndex, setSectionIndex] = useState(0)
+  const [questionIndex, setQuestionIndex] = useState(0)
   const [answers, setAnswers] = useState<Answers>({})
-  const [currentSectionIndex, setCurrentSectionIndex] = useState(0)
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0)
+  const [transitioning, setTransitioning] = useState(false)
 
-  // On mount, check for resumed answers from transition page
+  // Restore answers if coming back from transition page
   useEffect(() => {
-    const raw = searchParams.get('data')
-    if (raw) {
+    if (dataParam) {
       try {
-        const restored = JSON.parse(decodeURIComponent(raw)) as Answers
+        const restored = JSON.parse(decodeURIComponent(dataParam))
         setAnswers(restored)
-        // We've just finished section 0 (ASRS), so start on section 1 (DASS-21)
-        setCurrentSectionIndex(1)
-        setCurrentQuestionIndex(0)
-      } catch {
-        // ignore malformed data
-      }
+        setSectionIndex(1)
+        setQuestionIndex(0)
+      } catch {}
     }
-  }, [searchParams])
+  }, [dataParam])
 
-  const currentSection = SECTIONS[currentSectionIndex]
-  const currentQuestion = currentSection.questions[currentQuestionIndex]
-  const totalAnswered = Object.keys(answers).length
-  const totalQuestions = ALL_QUESTIONS.length
+  // Redirect to /start if no email provided
+  useEffect(() => {
+    if (!emailParam && !dataParam) {
+      router.replace('/start')
+    }
+  }, [emailParam, dataParam, router])
 
-  const handleAnswer = useCallback((value: number) => {
+  const currentSection = SECTIONS[sectionIndex]
+  const currentQuestion = currentSection.questions[questionIndex]
+  const totalQuestions = SECTIONS.reduce((sum, s) => sum + s.questions.length, 0)
+  const globalQuestionNumber = SECTIONS
+    .slice(0, sectionIndex)
+    .reduce((sum, s) => sum + s.questions.length, 0) + questionIndex + 1
+
+  async function handleAnswer(value: number) {
+    if (transitioning) return
+    setTransitioning(true)
     const newAnswers = { ...answers, [currentQuestion.id]: value }
     setAnswers(newAnswers)
 
-    const nextQIndex = currentQuestionIndex + 1
-    const isLastQuestionInSection = nextQIndex >= currentSection.questions.length
-    const isLastSection = currentSectionIndex === SECTIONS.length - 1
+    setTimeout(async () => {
+      const isLastQuestionInSection = questionIndex === currentSection.questions.length - 1
+      const isLastSection = sectionIndex === SECTIONS.length - 1
 
-    if (!isLastQuestionInSection) {
-      setCurrentQuestionIndex(nextQIndex)
-    } else if (!isLastSection) {
-      // End of section 1 (ASRS) — redirect to transition page, passing answers
-      router.push(`/assessment/transition?data=${encodeURIComponent(JSON.stringify(newAnswers))}`)
-    } else {
-      // Done — store answers and navigate to results
-      sessionStorage.setItem('clarity_answers', JSON.stringify(newAnswers))
-      router.push('/results')
-    }
-  }, [answers, currentQuestion, currentQuestionIndex, currentSection, currentSectionIndex, router])
+      if (isLastQuestionInSection && isLastSection) {
+        // All done — score, submit, then go to results
+        const results = scoreAll(newAnswers)
+        const email = decodeURIComponent(emailParam)
+
+        // Fire and forget — don't await, go to results immediately
+        fetch('/api/submit', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email,
+            answers: newAnswers,
+            dass: results.dass,
+            asrs: results.asrs,
+            overlapFlag: results.overlapFlag,
+          }),
+        }).catch(console.error)
+
+        // Go to results
+        const encoded = encodeURIComponent(JSON.stringify(newAnswers))
+        router.push(`/results?data=${encoded}`)
+      } else if (isLastQuestionInSection) {
+        // End of ASRS — go to transition page, carry email + answers
+        const encodedAnswers = encodeURIComponent(JSON.stringify(newAnswers))
+        const encodedEmail = emailParam
+        router.push(`/assessment/transition?data=${encodedAnswers}&email=${encodedEmail}`)
+      } else {
+        setQuestionIndex(questionIndex + 1)
+      }
+      setTransitioning(false)
+    }, 300)
+  }
+
+  if (!emailParam && !dataParam) return null
 
   return (
     <>
       <Navbar />
-      <main className="min-h-screen bg-brand-offWhite pt-24 pb-16 px-4">
-        <div className="max-w-2xl mx-auto">
-          {/* Section header */}
-          <div className="mb-8">
-            <h1 className="text-2xl font-black text-brand-navy mb-1">{currentSection.title}</h1>
-            <p className="text-sm text-brand-muted">{currentSection.subtitle}</p>
-          </div>
-          {/* Progress */}
-          <div className="mb-10">
+      <main className="min-h-screen bg-brand-offWhite pt-16">
+        <div className="bg-brand-navy text-white px-4 py-8">
+          <div className="max-w-2xl mx-auto">
+            <h1 className="text-xl font-bold mb-1">{currentSection.title}</h1>
+            <p className="text-white/60 text-sm mb-6">{currentSection.subtitle}</p>
             <ProgressBar
-              current={totalAnswered}
+              current={globalQuestionNumber - 1}
               total={totalQuestions}
-              sectionLabel={`Section ${currentSectionIndex + 1} of ${SECTIONS.length}`}
+              sectionLabel={`Section ${sectionIndex + 1} of ${SECTIONS.length}`}
             />
           </div>
-          {/* Question */}
-          <QuestionCard
-            key={currentQuestion.id}
-            question={currentQuestion}
-            questionNumber={totalAnswered + 1}
-            totalQuestions={totalQuestions}
-            onAnswer={handleAnswer}
-          />
+        </div>
+        <div className="max-w-2xl mx-auto px-4 py-12">
+          <AnimatePresence mode="wait">
+            <QuestionCard
+              key={currentQuestion.id}
+              question={currentQuestion}
+              questionNumber={globalQuestionNumber}
+              totalQuestions={totalQuestions}
+              onAnswer={handleAnswer}
+            />
+          </AnimatePresence>
+        </div>
+        <div className="max-w-2xl mx-auto px-4 pb-12 flex justify-center gap-1.5 flex-wrap">
+          {currentSection.questions.map((q, i) => (
+            <div
+              key={q.id}
+              className={`h-1.5 rounded-full transition-all duration-300 ${
+                i < questionIndex
+                  ? 'w-4 bg-brand-teal'
+                  : i === questionIndex
+                  ? 'w-6 bg-brand-accent'
+                  : 'w-1.5 bg-brand-border'
+              }`}
+            />
+          ))}
         </div>
       </main>
+      <Footer />
     </>
   )
 }
 
 export default function AssessmentPage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center bg-brand-offWhite">
-        <div className="text-brand-muted text-lg">Loading assessment…</div>
-      </div>
-    }>
-      <AssessmentInner />
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center text-brand-muted">Loading...</div>}>
+      <AssessmentContent />
     </Suspense>
   )
 }

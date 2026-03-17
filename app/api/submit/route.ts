@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
+import { Resend } from 'resend'
+import { buildResultsEmail } from '@/lib/emailTemplate'
+
+const resend = new Resend(process.env.RESEND_API_KEY)
 
 export async function POST(req: NextRequest) {
   try {
@@ -32,29 +36,39 @@ export async function POST(req: NextRequest) {
 
     if (dbError) {
       console.error('Supabase insert error:', dbError)
-      return NextResponse.json({ error: 'Database error' }, { status: 500 })
     }
 
-    // 2 — Add to Blastable "Assessment Profile" list
-    const blastableRes = await fetch(
-      `${process.env.BLASTABLE_API_URL}/lists/${process.env.BLASTABLE_LIST_ID}/subscribers`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-API-KEY': process.env.BLASTABLE_API_KEY!,
-        },
-        body: JSON.stringify({
-          EMAIL: email,
-          status: 'subscribed',
-        }),
-      }
-    )
-
-    if (!blastableRes.ok) {
-      // Log but don't fail — Supabase save already succeeded
-      const blastableErr = await blastableRes.text()
+    // 2 — Add to Blastable list
+    try {
+      await fetch(
+        `${process.env.BLASTABLE_API_URL}/lists/${process.env.BLASTABLE_LIST_ID}/subscribers`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-API-KEY': process.env.BLASTABLE_API_KEY!,
+          },
+          body: JSON.stringify({
+            EMAIL: email,
+            status: 'subscribed',
+          }),
+        }
+      )
+    } catch (blastableErr) {
       console.warn('Blastable subscription warning:', blastableErr)
+    }
+
+    // 3 — Send results email via Resend
+    try {
+      const htmlEmail = buildResultsEmail({ email, dass, asrs, overlapFlag })
+      await resend.emails.send({
+        from: 'Clarity Health PLLC <results@send.clarityhealth.vip>',
+        to: email,
+        subject: 'Your Brain Snapshot Report — Clarity Health PLLC',
+        html: htmlEmail,
+      })
+    } catch (emailErr) {
+      console.error('Resend email error:', emailErr)
     }
 
     return NextResponse.json({ success: true })

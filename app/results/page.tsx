@@ -1,53 +1,37 @@
 'use client'
-import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useMemo, Suspense } from 'react'
+import { useSearchParams } from 'next/navigation'
 import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
 import ScoreGauge from '@/components/ScoreGauge'
 import { scoreAll } from '@/lib/scoring'
-import type { FullResult, Answers } from '@/lib/scoring'
+import type { Answers } from '@/lib/scoring'
 import Link from 'next/link'
 
 const DASS_MAX = 42
-const ASRS_MAX = 36
+const ASRS_MAX = 18
 
-export default function ResultsPage() {
-  const router = useRouter()
-  const [result, setResult] = useState<FullResult | null>(null)
-  const [email, setEmail] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [submitted, setSubmitted] = useState(false)
+function ResultsContent() {
+  const params = useSearchParams()
+  const dataParam = params.get('data') || ''
 
-  useEffect(() => {
-    const raw = sessionStorage.getItem('clarity_answers')
-    if (!raw) { router.push('/'); return }
-    const answers: Answers = JSON.parse(raw)
-    setResult(scoreAll(answers))
-  }, [router])
-
-  async function handleEmailSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    setLoading(true)
+  const result = useMemo(() => {
+    if (!dataParam) return null
     try {
-      const res = await fetch('/api/submit', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, dass: result!.dass, asrs: result!.asrs, overlapFlag: result!.overlapFlag }),
-      })
-      if (!res.ok) throw new Error('Submission failed')
-      setSubmitted(true)
-    } catch (err) {
-      console.error(err)
-      alert('Something went wrong. Please try again.')
-    } finally {
-      setLoading(false)
+      const answers: Answers = JSON.parse(decodeURIComponent(dataParam))
+      return scoreAll(answers)
+    } catch {
+      return null
     }
-  }
+  }, [dataParam])
 
   if (!result) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-brand-offWhite">
-        <div className="text-brand-muted text-lg">Calculating your results…</div>
+      <div className="min-h-screen flex flex-col items-center justify-center bg-brand-offWhite px-4 text-center">
+        <p className="text-brand-muted text-lg mb-4">No results found.</p>
+        <Link href="/start" className="text-brand-teal font-semibold hover:underline">
+          ← Start the assessment
+        </Link>
       </div>
     )
   }
@@ -59,27 +43,40 @@ export default function ResultsPage() {
       <Navbar />
       <main className="min-h-screen bg-brand-offWhite pt-24 pb-16 px-4">
         <div className="max-w-3xl mx-auto">
+
           <div className="text-center mb-12">
             <p className="text-brand-teal text-sm font-semibold uppercase tracking-widest mb-2">Your Results</p>
-            <h1 className="text-4xl font-black text-brand-navy mb-3">Your Clarity Assessment</h1>
+            <h1 className="text-4xl font-black text-brand-navy mb-3">Your Brain Snapshot Report</h1>
             <p className="text-brand-muted text-lg max-w-xl mx-auto">
               Based on your responses, here is your personalised mental health and attention profile.
             </p>
+          </div>
+
+          {/* Email sent confirmation */}
+          <div className="bg-brand-teal/10 border border-brand-teal/40 rounded-2xl p-5 mb-10 flex items-center gap-4">
+            <span className="text-2xl flex-shrink-0">📬</span>
+            <div>
+              <p className="font-semibold text-brand-teal text-sm">Your report is on its way!</p>
+              <p className="text-brand-muted text-sm leading-relaxed">
+                A copy of this Brain Snapshot Report has been emailed to you — check your inbox
+                (and spam folder) in the next few minutes.
+              </p>
+            </div>
           </div>
 
           {/* DASS Results */}
           <h2 className="text-xl font-bold text-brand-text mb-4">Emotional Wellbeing (DASS-21)</h2>
           <div className="grid sm:grid-cols-3 gap-4 mb-10">
             <ScoreGauge label="Depression" score={dass.depression.score} maxScore={DASS_MAX} severity={dass.depression.severity} />
-            <ScoreGauge label="Anxiety" score={dass.anxiety.score} maxScore={DASS_MAX} severity={dass.anxiety.severity} />
-            <ScoreGauge label="Stress" score={dass.stress.score} maxScore={DASS_MAX} severity={dass.stress.severity} />
+            <ScoreGauge label="Anxiety"    score={dass.anxiety.score}    maxScore={DASS_MAX} severity={dass.anxiety.severity} />
+            <ScoreGauge label="Stress"     score={dass.stress.score}     maxScore={DASS_MAX} severity={dass.stress.severity} />
           </div>
 
           {/* ASRS Results */}
-          <h2 className="text-xl font-bold text-brand-text mb-4">Attention & Focus (ASRS v1.1)</h2>
+          <h2 className="text-xl font-bold text-brand-text mb-4">Attention &amp; Focus (ASRS v1.1)</h2>
           <div className="grid sm:grid-cols-2 gap-4 mb-10">
-            <ScoreGauge label="Inattention" score={asrs.inattentionScore} maxScore={ASRS_MAX / 2} severity={asrs.inattentionSeverity} />
-            <ScoreGauge label="Hyperactivity / Impulsivity" score={asrs.hyperactivityScore} maxScore={ASRS_MAX / 2} severity={asrs.hyperactivitySeverity} />
+            <ScoreGauge label="Inattention"                score={asrs.inattentionScore}   maxScore={ASRS_MAX} severity={asrs.inattentionSeverity} />
+            <ScoreGauge label="Hyperactivity / Impulsivity" score={asrs.hyperactivityScore} maxScore={ASRS_MAX} severity={asrs.hyperactivitySeverity} />
           </div>
 
           {/* ADHD Screener */}
@@ -103,58 +100,13 @@ export default function ResultsPage() {
             </div>
           )}
 
-          {/* Email capture */}
-          <div className="bg-brand-navy rounded-2xl p-8 text-center mb-8">
-            {submitted ? (
-              <>
-                <p className="text-3xl mb-3">✓</p>
-                <h2 className="text-2xl font-black text-white mb-2">Report on its way!</h2>
-                <p className="text-white/70">Check your inbox at <span className="text-brand-accent font-semibold">{email}</span> for your personalised results summary.</p>
-              </>
-            ) : (
-              <>
-                <h2 className="text-2xl font-black text-white mb-2">Save & Share Your Results</h2>
-                <p className="text-white/70 mb-6 max-w-sm mx-auto">
-                  Enter your email and we'll send you a copy of your results to keep or share with your provider.
-                </p>
-                <form onSubmit={handleEmailSubmit} className="max-w-md mx-auto">
-                  <div className="flex flex-col sm:flex-row gap-3 mb-4">
-                    <input
-                      type="email"
-                      required
-                      value={email}
-                      onChange={e => setEmail(e.target.value)}
-                      placeholder="Enter your email address"
-                      className="flex-1 px-5 py-4 rounded-xl text-brand-text text-sm focus:outline-none focus:ring-2 focus:ring-brand-teal"
-                    />
-                    <button
-                      type="submit"
-                      disabled={loading}
-                      className="bg-brand-teal hover:bg-brand-tealDark text-white font-bold px-6 py-4 rounded-xl transition-colors whitespace-nowrap disabled:opacity-60"
-                    >
-                      {loading ? 'Sending...' : 'Send My Report →'}
-                    </button>
-                  </div>
-                  <label className="flex items-start gap-3 text-left cursor-pointer">
-                    <input
-                      type="checkbox"
-                      required
-                      className="mt-1 w-4 h-4 rounded accent-brand-teal flex-shrink-0"
-                    />
-                    <span className="text-white/60 text-xs leading-relaxed">
-                      I agree to share my results with Clarity Health PLLC and receive my personalised report
-                      and occasional information about ADHD and mental health care. I can unsubscribe at any time.
-                    </span>
-                  </label>
-                </form>
-              </>
-            )}
-          </div>
-
           {/* CTA */}
-          <div className="bg-brand-slate rounded-2xl p-8 text-center">
+          <div className="bg-brand-navy rounded-2xl p-8 text-center mb-8">
             <h2 className="text-2xl font-black text-white mb-3">Ready to Take the Next Step?</h2>
-            <p className="text-white/70 mb-6">Book a consultation with Thomas Stewart, MSN, FNP-C to discuss your results and create a personalised care plan.</p>
+            <p className="text-white/70 mb-6 max-w-sm mx-auto">
+              Book a consultation with Thomas Stewart, MSN, FNP-C to discuss your results
+              and create a personalised care plan.
+            </p>
             <a
               href="https://clarityhealth.vip/lander#contact-section"
               className="inline-flex items-center gap-2 bg-brand-teal hover:bg-brand-tealDark text-white font-bold px-8 py-4 rounded-xl transition-colors"
@@ -163,8 +115,18 @@ export default function ResultsPage() {
             </a>
           </div>
 
-          <div className="text-center mt-8">
-            <Link href="/assessment" className="text-brand-teal text-sm font-medium hover:underline">
+          {/* Disclaimer */}
+          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6 mb-8 text-sm text-amber-800 leading-relaxed">
+            <p className="font-bold mb-2">⚠ Important</p>
+            <p>
+              This screening tool is for informational purposes only and does not constitute a medical diagnosis.
+              Results should be used as a starting point for a conversation with a qualified healthcare provider.
+              If you are in crisis, call or text <strong>988</strong> (Suicide &amp; Crisis Lifeline).
+            </p>
+          </div>
+
+          <div className="text-center">
+            <Link href="/start" className="text-brand-teal text-sm font-medium hover:underline">
               ← Retake the Assessment
             </Link>
           </div>
@@ -172,5 +134,17 @@ export default function ResultsPage() {
       </main>
       <Footer />
     </>
+  )
+}
+
+export default function ResultsPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-brand-offWhite">
+        <div className="text-brand-muted text-lg">Calculating your results…</div>
+      </div>
+    }>
+      <ResultsContent />
+    </Suspense>
   )
 }
