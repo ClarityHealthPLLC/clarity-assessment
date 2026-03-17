@@ -53,13 +53,21 @@ function ResultsContent() {
           </div>
 
           {/* Email sent confirmation */}
-          <div className="bg-brand-teal/10 border border-brand-teal/40 rounded-2xl p-5 mb-10 flex items-center gap-4">
+          <div className="bg-brand-teal/10 border border-brand-teal/40 rounded-2xl p-5 mb-6 flex items-center gap-4">
             <span className="text-2xl flex-shrink-0">📬</span>
             <div>
               <p className="font-semibold text-brand-teal text-sm">Your report is on its way!</p>
               <p className="text-brand-muted text-sm leading-relaxed">
-                A copy of this Brain Snapshot Report has been emailed to you — check your inbox
-                (and spam folder) in the next few minutes.
+                A copy of this Brain Snapshot Report has been emailed to you — check your inbox in the next few minutes.
+              </p>
+            </div>
+          </div>
+          <div className="bg-amber-50 border-2 border-amber-400 rounded-2xl p-5 mb-10 flex items-start gap-4">
+            <span className="text-2xl flex-shrink-0">⚠️</span>
+            <div>
+              <p className="font-bold text-amber-800 text-sm mb-1">Don&apos;t see the email? Check your Junk or Spam folder.</p>
+              <p className="text-amber-700 text-sm leading-relaxed">
+                Results emails from <strong>results@send.clarityhealth.vip</strong> are sometimes filtered by email providers. If you find it in spam, please mark it as <strong>&ldquo;Not Spam&rdquo;</strong> so future emails reach your inbox.
               </p>
             </div>
           </div>

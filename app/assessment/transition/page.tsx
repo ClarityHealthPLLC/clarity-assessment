@@ -8,10 +8,10 @@ import Link from 'next/link'
 function TransitionContent() {
   const params = useSearchParams()
   const data = params.get('data') || ''
-  const email = params.get('email') || ''
 
   // data is already decoded by useSearchParams — re-encode it for the next URL
-  const continueUrl = `/assessment?data=${encodeURIComponent(data)}&email=${encodeURIComponent(email)}`
+  // email stays in sessionStorage, no need to pass it through the URL
+  const continueUrl = `/assessment?data=${encodeURIComponent(data)}`
 
   return (
     <>

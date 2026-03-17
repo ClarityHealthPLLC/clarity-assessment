@@ -23,8 +23,8 @@ export default function HomePage() {
     }
     setError('')
     setLoading(true)
-    const encoded = encodeURIComponent(email)
-    router.push(`/assessment?email=${encoded}`)
+    sessionStorage.setItem('assessment_email', email)
+    router.push('/assessment')
   }
 
   return (
@@ -225,6 +225,9 @@ export default function HomePage() {
             </form>
             <p className="text-white/30 text-xs text-center mt-6">
               🔒 Free · 5 minutes · Your information is confidential and will never be sold or shared with third parties.
+            </p>
+            <p className="text-white/40 text-xs text-center mt-2">
+              📬 Results are emailed instantly — if you don&apos;t see them, check your Junk or Spam folder.
             </p>
           </div>
         </section>

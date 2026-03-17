@@ -13,16 +13,21 @@ import type { Answers } from '@/lib/scoring'
 function AssessmentContent() {
   const router = useRouter()
   const params = useSearchParams()
-  const emailParam = params.get('email') || ''
   const dataParam = params.get('data') || ''
 
   const [sectionIndex, setSectionIndex] = useState(0)
   const [questionIndex, setQuestionIndex] = useState(0)
   const [answers, setAnswers] = useState<Answers>({})
   const [transitioning, setTransitioning] = useState(false)
+  const [emailParam, setEmailParam] = useState('')
 
-  // Restore answers if coming back from transition page
+  // Restore answers if coming back from transition page; read email from sessionStorage
   useEffect(() => {
+    const stored = sessionStorage.getItem('assessment_email') || ''
+    setEmailParam(stored)
+    if (!stored && !dataParam) {
+      router.replace('/')
+    }
     if (dataParam) {
       try {
         const restored = JSON.parse(decodeURIComponent(dataParam))
@@ -31,14 +36,7 @@ function AssessmentContent() {
         setQuestionIndex(0)
       } catch {}
     }
-  }, [dataParam])
-
-  // Redirect to /start if no email provided
-  useEffect(() => {
-    if (!emailParam && !dataParam) {
-      router.replace('/start')
-    }
-  }, [emailParam, dataParam, router])
+  }, [dataParam, router])
 
   const currentSection = SECTIONS[sectionIndex]
   const currentQuestion = currentSection.questions[questionIndex]
@@ -60,7 +58,7 @@ function AssessmentContent() {
       if (isLastQuestionInSection && isLastSection) {
         // All done — score, submit, then go to results
         const results = scoreAll(newAnswers)
-        const email = decodeURIComponent(emailParam)
+        const email = emailParam
 
         // Fire and forget — don't await, go to results immediately
         fetch('/api/submit', {
@@ -79,10 +77,9 @@ function AssessmentContent() {
         const encoded = encodeURIComponent(JSON.stringify(newAnswers))
         router.push(`/results?data=${encoded}`)
       } else if (isLastQuestionInSection) {
-        // End of ASRS — go to transition page, carry email + answers
+        // End of ASRS — go to transition page, carry answers (email stays in sessionStorage)
         const encodedAnswers = encodeURIComponent(JSON.stringify(newAnswers))
-        const encodedEmail = emailParam
-        router.push(`/assessment/transition?data=${encodedAnswers}&email=${encodedEmail}`)
+        router.push(`/assessment/transition?data=${encodedAnswers}`)
       } else {
         setQuestionIndex(questionIndex + 1)
       }
