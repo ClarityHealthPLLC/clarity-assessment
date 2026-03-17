@@ -14,6 +14,9 @@ const ASRS_MAX = 36
 export default function ResultsPage() {
   const router = useRouter()
   const [result, setResult] = useState<FullResult | null>(null)
+  const [email, setEmail] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [submitted, setSubmitted] = useState(false)
 
   useEffect(() => {
     const raw = sessionStorage.getItem('clarity_answers')
@@ -21,6 +24,25 @@ export default function ResultsPage() {
     const answers: Answers = JSON.parse(raw)
     setResult(scoreAll(answers))
   }, [router])
+
+  async function handleEmailSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    setLoading(true)
+    try {
+      const res = await fetch('/api/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, dass: result!.dass, asrs: result!.asrs, overlapFlag: result!.overlapFlag }),
+      })
+      if (!res.ok) throw new Error('Submission failed')
+      setSubmitted(true)
+    } catch (err) {
+      console.error(err)
+      alert('Something went wrong. Please try again.')
+    } finally {
+      setLoading(false)
+    }
+  }
 
   if (!result) {
     return (
@@ -81,8 +103,56 @@ export default function ResultsPage() {
             </div>
           )}
 
+          {/* Email capture */}
+          <div className="bg-brand-navy rounded-2xl p-8 text-center mb-8">
+            {submitted ? (
+              <>
+                <p className="text-3xl mb-3">✓</p>
+                <h2 className="text-2xl font-black text-white mb-2">Report on its way!</h2>
+                <p className="text-white/70">Check your inbox at <span className="text-brand-accent font-semibold">{email}</span> for your personalised results summary.</p>
+              </>
+            ) : (
+              <>
+                <h2 className="text-2xl font-black text-white mb-2">Save & Share Your Results</h2>
+                <p className="text-white/70 mb-6 max-w-sm mx-auto">
+                  Enter your email and we'll send you a copy of your results to keep or share with your provider.
+                </p>
+                <form onSubmit={handleEmailSubmit} className="max-w-md mx-auto">
+                  <div className="flex flex-col sm:flex-row gap-3 mb-4">
+                    <input
+                      type="email"
+                      required
+                      value={email}
+                      onChange={e => setEmail(e.target.value)}
+                      placeholder="Enter your email address"
+                      className="flex-1 px-5 py-4 rounded-xl text-brand-text text-sm focus:outline-none focus:ring-2 focus:ring-brand-teal"
+                    />
+                    <button
+                      type="submit"
+                      disabled={loading}
+                      className="bg-brand-teal hover:bg-brand-tealDark text-white font-bold px-6 py-4 rounded-xl transition-colors whitespace-nowrap disabled:opacity-60"
+                    >
+                      {loading ? 'Sending...' : 'Send My Report →'}
+                    </button>
+                  </div>
+                  <label className="flex items-start gap-3 text-left cursor-pointer">
+                    <input
+                      type="checkbox"
+                      required
+                      className="mt-1 w-4 h-4 rounded accent-brand-teal flex-shrink-0"
+                    />
+                    <span className="text-white/60 text-xs leading-relaxed">
+                      I agree to share my results with Clarity Health PLLC and receive my personalised report
+                      and occasional information about ADHD and mental health care. I can unsubscribe at any time.
+                    </span>
+                  </label>
+                </form>
+              </>
+            )}
+          </div>
+
           {/* CTA */}
-          <div className="bg-brand-navy rounded-2xl p-8 text-center">
+          <div className="bg-brand-slate rounded-2xl p-8 text-center">
             <h2 className="text-2xl font-black text-white mb-3">Ready to Take the Next Step?</h2>
             <p className="text-white/70 mb-6">Book a consultation with Thomas Stewart, MSN, FNP-C to discuss your results and create a personalised care plan.</p>
             <a
