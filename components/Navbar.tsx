@@ -1,3 +1,5 @@
+import Link from 'next/link'
+
 export default function Navbar() {
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-brand-navy/95 backdrop-blur-sm border-b border-white/10">
@@ -7,12 +9,12 @@ export default function Navbar() {
           <span className="text-white/60 text-sm font-normal ml-1">PLLC</span>
         </a>
         <div className="flex items-center gap-4">
-          <a
+          <Link
             href="/about"
             className="hidden sm:inline-flex text-white/70 hover:text-white text-sm font-medium transition-colors"
           >
             About This Assessment
-          </a>
+          </Link>
           <a
             href="https://clarityhealth.vip/lander#contact-section"
             className="hidden sm:inline-flex items-center gap-2 bg-brand-teal hover:bg-brand-tealDark text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors"
