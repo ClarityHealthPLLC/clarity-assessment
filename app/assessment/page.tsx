@@ -1,5 +1,5 @@
 'use client'
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Navbar from '@/components/Navbar'
 import ProgressBar from '@/components/ProgressBar'
@@ -7,7 +7,8 @@ import QuestionCard from '@/components/QuestionCard'
 import { SECTIONS, ALL_QUESTIONS } from '@/lib/questions'
 import type { Answers } from '@/lib/scoring'
 
-export default function AssessmentPage() {
+// Inner component isolates useSearchParams so the page can be Suspense-wrapped
+function AssessmentInner() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [answers, setAnswers] = useState<Answers>({})
@@ -84,5 +85,17 @@ export default function AssessmentPage() {
         </div>
       </main>
     </>
+  )
+}
+
+export default function AssessmentPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-brand-offWhite">
+        <div className="text-brand-muted text-lg">Loading assessment…</div>
+      </div>
+    }>
+      <AssessmentInner />
+    </Suspense>
   )
 }

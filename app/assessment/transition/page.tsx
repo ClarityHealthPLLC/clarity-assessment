@@ -1,10 +1,12 @@
 'use client'
+import { Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
 
-export default function TransitionPage() {
+// Inner component isolates useSearchParams so the page can be Suspense-wrapped
+function TransitionInner() {
   const searchParams = useSearchParams()
   const data = searchParams.get('data') ?? ''
 
@@ -23,7 +25,7 @@ export default function TransitionPage() {
               <span>✓</span> Section 1 Complete
             </div>
             <h1 className="text-4xl sm:text-5xl font-black text-white leading-tight mb-4">
-              Great work — you're halfway there!
+              Great work — you&apos;re halfway there!
             </h1>
             <p className="text-white/70 text-lg mb-12">
               Take a breath before continuing to Part 2.
@@ -80,5 +82,17 @@ export default function TransitionPage() {
       </main>
       <Footer />
     </>
+  )
+}
+
+export default function TransitionPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-brand-navy">
+        <div className="text-white/60 text-lg">Loading…</div>
+      </div>
+    }>
+      <TransitionInner />
+    </Suspense>
   )
 }
