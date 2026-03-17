@@ -1,6 +1,6 @@
 'use client'
-import { useState, useCallback } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useCallback, useEffect } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Navbar from '@/components/Navbar'
 import ProgressBar from '@/components/ProgressBar'
 import QuestionCard from '@/components/QuestionCard'
@@ -9,9 +9,26 @@ import type { Answers } from '@/lib/scoring'
 
 export default function AssessmentPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [answers, setAnswers] = useState<Answers>({})
   const [currentSectionIndex, setCurrentSectionIndex] = useState(0)
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0)
+
+  // On mount, check for resumed answers from transition page
+  useEffect(() => {
+    const raw = searchParams.get('data')
+    if (raw) {
+      try {
+        const restored = JSON.parse(decodeURIComponent(raw)) as Answers
+        setAnswers(restored)
+        // We've just finished section 0 (ASRS), so start on section 1 (DASS-21)
+        setCurrentSectionIndex(1)
+        setCurrentQuestionIndex(0)
+      } catch {
+        // ignore malformed data
+      }
+    }
+  }, [searchParams])
 
   const currentSection = SECTIONS[currentSectionIndex]
   const currentQuestion = currentSection.questions[currentQuestionIndex]
@@ -23,18 +40,18 @@ export default function AssessmentPage() {
     setAnswers(newAnswers)
 
     const nextQIndex = currentQuestionIndex + 1
-    if (nextQIndex < currentSection.questions.length) {
+    const isLastQuestionInSection = nextQIndex >= currentSection.questions.length
+    const isLastSection = currentSectionIndex === SECTIONS.length - 1
+
+    if (!isLastQuestionInSection) {
       setCurrentQuestionIndex(nextQIndex)
+    } else if (!isLastSection) {
+      // End of section 1 (ASRS) — redirect to transition page, passing answers
+      router.push(`/assessment/transition?data=${encodeURIComponent(JSON.stringify(newAnswers))}`)
     } else {
-      const nextSIndex = currentSectionIndex + 1
-      if (nextSIndex < SECTIONS.length) {
-        setCurrentSectionIndex(nextSIndex)
-        setCurrentQuestionIndex(0)
-      } else {
-        // Done — store answers and navigate to results
-        sessionStorage.setItem('clarity_answers', JSON.stringify(newAnswers))
-        router.push('/results')
-      }
+      // Done — store answers and navigate to results
+      sessionStorage.setItem('clarity_answers', JSON.stringify(newAnswers))
+      router.push('/results')
     }
   }, [answers, currentQuestion, currentQuestionIndex, currentSection, currentSectionIndex, router])
 

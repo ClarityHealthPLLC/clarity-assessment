@@ -65,18 +65,18 @@ export const ASRS_QUESTIONS: Question[] = [
   { id: 38, form: 'ASRS', subscale: 'Hyperactivity', text: 'How often do you have difficulty waiting your turn in situations when turn taking is required?',                                                             options: ASRS_OPTIONS },
   { id: 39, form: 'ASRS', subscale: 'Hyperactivity', text: 'How often do you interrupt others when they are busy?',                                                                                                      options: ASRS_OPTIONS },
 ]
-export const ALL_QUESTIONS: Question[] = [...DASS21_QUESTIONS, ...ASRS_QUESTIONS]
+export const ALL_QUESTIONS: Question[] = [...ASRS_QUESTIONS, ...DASS21_QUESTIONS]
 export const SECTIONS = [
   {
-    key: 'DASS21',
-    title: 'Part 1 of 2: Emotional Wellbeing',
-    subtitle: 'The following questions ask about how you have felt over the past week. There are no right or wrong answers.',
-    questions: DASS21_QUESTIONS,
-  },
-  {
     key: 'ASRS',
-    title: 'Part 2 of 2: Attention & Focus',
+    title: 'Part 1 of 2: Attention & Focus',
     subtitle: 'The following questions ask about how you have felt and conducted yourself over the past 6 months.',
     questions: ASRS_QUESTIONS,
+  },
+  {
+    key: 'DASS21',
+    title: 'Part 2 of 2: Emotional Wellbeing',
+    subtitle: 'The following questions ask about how you have felt over the past week — this is a different timeframe from the previous section.',
+    questions: DASS21_QUESTIONS,
   },
 ]

@@ -6,12 +6,20 @@ export default function Navbar() {
           Clarity<span className="text-brand-accent">Health</span>
           <span className="text-white/60 text-sm font-normal ml-1">PLLC</span>
         </a>
-        <a
-          href="https://clarityhealth.vip/lander#contact-section"
-          className="hidden sm:inline-flex items-center gap-2 bg-brand-teal hover:bg-brand-tealDark text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors"
-        >
-          Book Consultation
-        </a>
+        <div className="flex items-center gap-4">
+          <a
+            href="/about"
+            className="hidden sm:inline-flex text-white/70 hover:text-white text-sm font-medium transition-colors"
+          >
+            About This Assessment
+          </a>
+          <a
+            href="https://clarityhealth.vip/lander#contact-section"
+            className="hidden sm:inline-flex items-center gap-2 bg-brand-teal hover:bg-brand-tealDark text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors"
+          >
+            Book Consultation
+          </a>
+        </div>
       </div>
     </nav>
   )
